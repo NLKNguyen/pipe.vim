@@ -4,28 +4,43 @@
 " Origin: http://github.com/NLKNguyen/pipe.vim
 
 " Main: {{{
-let s:Pipe_Command_Prefix = ':!'
-let s:Pipe_Command_Postfix = ''
+let s:Pipe_Use = 'Default'
+" let s:Pipe_Use = 'Dispatch'
+
+" TODO: Add g:PipeUse function
+
 fun! g:Pipe(cmd)
-    echohl String | echon 'Pipe running... (press ctrl-c to abort)' | echohl None
+  let l:shell_commands = escape(a:cmd, '%#\')
+  if s:Pipe_Use ==? 'Dispatch'
+    call s:PipeDispatch(l:shell_commands)
+  else
+    call s:PipeDefault(l:shell_commands)
+  endif
+endfun
+command! -nargs=1 -bang -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 
-    silent! exe "noautocmd botright pedit ¦"
-    noautocmd wincmd P
-    setlocal modifiable
-    normal ggdG
+fun! s:PipeDefault(shell_commands)
+  echohl String | echon 'Pipe running... (press ctrl-c to abort)' | echohl None
 
-    call s:Load_Pipe_Preview_Settings()
+  silent! exe "noautocmd botright pedit ¦"
+  noautocmd wincmd P
+  setlocal modifiable
+  normal ggdG
 
-    set buftype=nofile
-    " silent! exe "noautocmd .! echo '" . escape(a:cmd, '%#\') . "'"
-    silent! exe "noautocmd .! " . escape(a:cmd, '%#\')
-    normal G
-    setlocal nomodifiable
-    noautocmd wincmd p
-    echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
+  call s:Load_Pipe_Preview_Settings()
+
+  set buftype=nofile
+  silent! exe "noautocmd .! " . a:shell_commands
+  normal G
+  setlocal nomodifiable
+  noautocmd wincmd p
+  echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
 endfun
 
-command! -nargs=1 -bang -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
+fun! s:PipeDispatch(shell_commands)
+  exec ":Dispatch " . l:shell_commands
+endfun
+
 " }}}
 
 
@@ -33,6 +48,9 @@ command! -nargs=1 -bang -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 " Default settings (can be set by users)
 let g:Pipe_Preview_LineNr = 0
 let g:Pipe_Preview_Wrap   = 0
+
+" TODO: use dictionary like this instead
+" let g:Pipe_Preview_Override = {'linenumber' : 0, 'wordwrap' : 0}
 
 " @brief Load default or user settings
 fun! s:Load_Pipe_Preview_Settings()
@@ -56,31 +74,50 @@ endfun
 
 
 " Get Or Set Variables: {{{
-fun! g:PipeGetVar(varname, prompt, visibility)
-  " TODO
-  echo 'test2'
+fun! g:PipeGetVar(varname, prompt, ...)
+  let l:value = ""
+
+  let l:visibility = 1
+  if a:0 == 1 "the number of optional arguments (...) is 1
+    let l:visibility = a:1
+  endif
+
+  if !exists(a:varname)
+    call g:PipeSetVar(a:varname, a:prompt, l:visibility)
+  endif
+
+  let l:value = {a:varname}
+
+  return l:value
 endfun
 
 
-fun! g:PipeSetVar(varname, prompt, visibility)
-  " TODO
+fun! g:PipeSetVar(varname, prompt, ...)
+  let l:value = ""
+
+  if exists(a:varname)
+    let l:value = {a:varname}
+  endif
+
+  let l:visibility = 1
+  if a:0 == 1 "the number of optional arguments (...) is 1
+    let l:visibility = a:1
+  endif
+
+  call inputsave()
+
+  if l:visibility == 0
+    let l:value = inputsecret(a:prompt)
+  else
+    let l:value = input(a:prompt, l:value)
+  endif
+
+  call inputrestore()
+
+  let {a:varname} = l:value
 endfun
 " }}}
 
-function! g:PipeGet(varname, prompt)
-  " let l:prefix = "b:PipeMongoDB_LOCAL_VAR_"
-  " let l:variable = l:prefix . a:varname
-  " if !exists(l:variable)
-  "   let {l:variable} = input(a:prompt . " = ")
-
-  " endif
-  let l:result = ""
-  if !exists(a:varname)
-    let l:result = input(a:prompt)
-
-  endif
-  return l:result
-endfunction
 
 " Get Text: {{{
 
@@ -111,6 +148,32 @@ fun! g:PipeGetCurrentWord()
   return expand("<cword>")
 endfun
 
+" }}}
+
+" Toggle Preview Window: {{{
+fun! g:PipeToggleWindow()
+  if s:PreviewWindowOpened()
+    :pclose
+  else
+    silent! exec "botright pedit ¦"
+  endif
+endfun
+command! -nargs=0 PipeToggleWindow :call g:PipeToggleWindow()
+
+fun! s:PreviewWindowOpened()
+    for nr in range(1, winnr('$'))
+        if getwinvar(nr, "&pvw") == 1
+            " found a preview
+            return 1
+        endif
+    endfor
+    return 0
+endfun
+" }}}
+
+" Mapping: {{{
+noremap <unique> <Plug>PipePrefix :Pipe 
+noremap <unique> <Plug>PipeToggle :PipeToggleWindow<CR>
 " }}}
 
 " vim: foldmethod=marker
