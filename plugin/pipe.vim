@@ -4,21 +4,43 @@
 " Origin: http://github.com/NLKNguyen/pipe.vim
 
 " Main: {{{
-let s:Pipe_Use = 'Default'
-" let s:Pipe_Use = 'Dispatch'
 
-" TODO: Add g:PipeUse function
+" @brief Method name that decides Pipe behavior
+let s:method = 'Default'
 
+" @brief Specify what method to be used for running commands
+" @param string - predefined method name
+fun! g:PipeUse(method)
+  if a:method ==? 'Default' || a:method ==? 'Dispatch'
+    let s:method = a:method
+  else
+    echo 'Unrecognized method `'. a:method .'`. ' .
+          \ 'Try :PipeUse with method `Default` or `Dispatch'
+  endif
+endfun
+
+" @brief command alias for g:PipeUse(method)
+command! -nargs=1  PipeUse :call g:PipeUse("<args>")
+
+
+" @brief The plugin's main function that calls the appropriate function
+"        depending on s:method
+" @param string - shell commands
 fun! g:Pipe(cmd)
   let l:shell_commands = escape(a:cmd, '%#\')
-  if s:Pipe_Use ==? 'Dispatch'
+  if s:method ==? 'Dispatch'
     call s:PipeDispatch(l:shell_commands)
   else
     call s:PipeDefault(l:shell_commands)
   endif
 endfun
-command! -nargs=1 -bang -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 
+" @brief command alias for g:Pipe(cmd)
+command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
+
+
+" @brief Default Pipe behavior: blocking & using Preview window
+" @param string - escaped shell commands
 fun! s:PipeDefault(shell_commands)
   echohl String | echon 'Pipe running... (press ctrl-c to abort)' | echohl None
 
@@ -37,8 +59,11 @@ fun! s:PipeDefault(shell_commands)
   echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
 endfun
 
+" @brief Alternative Pipe behavior: non-blocking & using Quickfix window
+" @param string - escaped shell commands
+" @see vim-dispatch - https://github.com/tpope/vim-dispatch
 fun! s:PipeDispatch(shell_commands)
-  exec ":Dispatch " . l:shell_commands
+  exec ":Dispatch " . a:shell_commands
 endfun
 
 " }}}
@@ -123,7 +148,7 @@ endfun
 
 " @brief  Get the selected text in visual mode
 " @return string - visually selected text (including newlines)
-" @see http://stackoverflow.com/a/6271254/794380 (original solution)
+" @see original solution - http://stackoverflow.com/a/6271254/794380
 fun! g:PipeGetSelectedText()
   " Why is this not a built-in Vim script function?!
   let [lnum1, col1] = getpos("'<")[1:2]
