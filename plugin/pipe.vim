@@ -13,6 +13,8 @@ let s:method = 'Default'
 fun! g:PipeUse(method)
   if a:method ==? 'Default' || a:method ==? 'Dispatch'
     let s:method = a:method
+    cclose "close quickfix window
+    pclose "close preview window
   else
     echo 'Unrecognized method `'. a:method .'`. ' .
           \ 'Try :PipeUse with method `Default` or `Dispatch'
@@ -22,16 +24,15 @@ endfun
 " @brief command alias for g:PipeUse(method)
 command! -nargs=1  PipeUse :call g:PipeUse("<args>")
 
-
 " @brief The plugin's main function that calls the appropriate function
 "        depending on s:method
-" @param string - shell commands
+" @param string - shell command
 fun! g:Pipe(cmd)
-  let l:shell_commands = escape(a:cmd, '%#\')
+  let l:shell_command = escape(a:cmd, '%#\')
   if s:method ==? 'Dispatch'
-    call s:PipeDispatch(l:shell_commands)
+    call s:PipeDispatch(l:shell_command)
   else
-    call s:PipeDefault(l:shell_commands)
+    call s:PipeDefault(l:shell_command)
   endif
 endfun
 
@@ -41,7 +42,7 @@ command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 
 " @brief Default Pipe behavior: blocking & using Preview window
 " @param string - escaped shell commands
-fun! s:PipeDefault(shell_commands)
+fun! s:PipeDefault(shell_command)
   echohl String | echon 'Pipe running... (press ctrl-c to abort)' | echohl None
 
   silent! exe "noautocmd botright pedit ¦"
@@ -52,7 +53,7 @@ fun! s:PipeDefault(shell_commands)
   call s:Load_Pipe_Preview_Settings()
 
   set buftype=nofile
-  silent! exe "noautocmd .! " . a:shell_commands
+  silent! exe "noautocmd .! " . a:shell_command
   normal G
   setlocal nomodifiable
   noautocmd wincmd p
@@ -62,8 +63,10 @@ endfun
 " @brief Alternative Pipe behavior: non-blocking & using Quickfix window
 " @param string - escaped shell commands
 " @see vim-dispatch - https://github.com/tpope/vim-dispatch
-fun! s:PipeDispatch(shell_commands)
-  exec ":Dispatch " . a:shell_commands
+fun! s:PipeDispatch(shell_command)
+  au BufWinEnter quickfix setlocal statusline=
+  exec ":Dispatch " . a:shell_command
+  let s:quickfix_is_open = 1
 endfun
 
 " }}}
@@ -97,6 +100,7 @@ fun! s:Load_Pipe_Preview_Settings()
 endfun
 "}}}
 
+" =============================================================================
 
 " Get Or Set Variables: {{{
 fun! g:PipeGetVar(varname, prompt, ...)
@@ -143,6 +147,7 @@ fun! g:PipeSetVar(varname, prompt, ...)
 endfun
 " }}}
 
+" =============================================================================
 
 " Get Text: {{{
 
@@ -175,8 +180,20 @@ endfun
 
 " }}}
 
-" Toggle Preview Window: {{{
+" =============================================================================
+
+" Toggle Quickfix Or Preview Window: {{{
 fun! g:PipeToggleWindow()
+  if s:method ==? 'Dispatch'
+    call g:PipeToggleQuickfix()
+  else
+    call g:PipeTogglePreview()
+  endif
+endfun
+" }}}
+
+" Toggle Preview Window: {{{
+fun! g:PipeTogglePreview()
   if s:PreviewWindowOpened()
     :pclose
   else
@@ -196,9 +213,31 @@ fun! s:PreviewWindowOpened()
 endfun
 " }}}
 
+" Toggle Quickfix Window: {{{
+let s:quickfix_is_open = 0
+
+fun! g:PipeToggleQuickfix()
+    if s:quickfix_is_open
+        cclose
+        let s:quickfix_is_open = 0
+        execute g:quickfix_return_to_window . "wincmd w"
+    else
+        let g:quickfix_return_to_window = winnr()
+        copen
+        let s:quickfix_is_open = 1
+    endif
+endfun
+" }}}
+
+" =============================================================================
 " Mapping: {{{
-noremap <unique> <Plug>PipePrefix :Pipe 
-noremap <unique> <Plug>PipeToggle :PipeToggleWindow<CR>
+noremap <Plug>PipePrompt :Pipe 
+noremap <silent> <Plug>PipeToggle :PipeToggleWindow<CR>
+
+if !exists("g:pipe_no_mappings") || ! g:pipe_no_mappings
+  nmap _<bar> <Plug>PipePrompt
+  nmap __ <Plug>PipeToggle
+endif
 " }}}
 
 " vim: foldmethod=marker
