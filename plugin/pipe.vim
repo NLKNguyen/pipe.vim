@@ -66,44 +66,49 @@ endfun
 fun! s:PipeDispatch(shell_command)
   au BufWinEnter quickfix setlocal statusline=
   exec ":Dispatch " . a:shell_command
+
+  " For function g:PipeToggleQuickfix
   let s:quickfix_is_open = 1
+  let g:quickfix_return_to_window = winnr()
 endfun
 
 " }}}
 
 
 " Preview Window Settings: {{{
-" Default settings (can be set by users)
-let g:Pipe_Preview_LineNr = 0
-let g:Pipe_Preview_Wrap   = 0
-
-" TODO: use dictionary like this instead
-" let g:Pipe_Preview_Override = {'linenumber' : 0, 'wordwrap' : 0}
 
 " @brief Load default or user settings
 fun! s:Load_Pipe_Preview_Settings()
-    if exists("g:Pipe_Preview_Wrap")
-      if g:Pipe_Preview_Wrap ==? '0'
-        setlocal nowrap
-      else
-        setlocal wrap
-      endif
-    endif
+  let l:custom = {'linenumber' : 0, 'wordwrap' : 0}
 
-    if exists("g:Pipe_Preview_LineNr")
-      if g:Pipe_Preview_LineNr ==? '0'
-        setlocal nonumber
-      else
-        setlocal number
-      endif
-    endif
+  if exists("g:pipe_preview_override")
+    let l:custom = g:pipe_preview_override
+  endif
+
+  if l:custom['linenumber']
+    setlocal number
+  else
+    setlocal nonumber
+  endif
+
+  if l:custom['wordwrap']
+    setlocal wrap
+  else
+    setlocal nowrap
+  endif
+
 endfun
 "}}}
 
 " =============================================================================
 
 " Get Or Set Variables: {{{
-fun! g:PipeGetVar(varname, prompt, ...)
+
+" @brief Get variable value or Ask for input if variable doesn't exist
+" @param variable - quoted string of the variable name
+" @param prompt - prompt message for input (in case an input is needed)
+" @return value of the variable
+fun! g:PipeGetVar(variable, prompt, ...)
   let l:value = ""
 
   let l:visibility = 1
@@ -111,21 +116,24 @@ fun! g:PipeGetVar(varname, prompt, ...)
     let l:visibility = a:1
   endif
 
-  if !exists(a:varname)
-    call g:PipeSetVar(a:varname, a:prompt, l:visibility)
+  if !exists(a:variable)
+    call g:PipeSetVar(a:variable, a:prompt, l:visibility)
   endif
 
-  let l:value = {a:varname}
+  let l:value = {a:variable}
 
   return l:value
 endfun
 
 
-fun! g:PipeSetVar(varname, prompt, ...)
+" @brief Set variable value by asking for user input
+" @param variable - quoted string of the variable name
+" @param prompt - prompt message for input
+fun! g:PipeSetVar(variable, prompt, ...)
   let l:value = ""
 
-  if exists(a:varname)
-    let l:value = {a:varname}
+  if exists(a:variable)
+    let l:value = {a:variable}
   endif
 
   let l:visibility = 1
@@ -143,13 +151,13 @@ fun! g:PipeSetVar(varname, prompt, ...)
 
   call inputrestore()
 
-  let {a:varname} = l:value
+  let {a:variable} = l:value
 endfun
 " }}}
 
 " =============================================================================
 
-" Get Text: {{{
+" Get Text For Composing Autocommands: {{{
 
 " @brief  Get the selected text in visual mode
 " @return string - visually selected text (including newlines)
@@ -190,9 +198,14 @@ fun! g:PipeToggleWindow()
     call g:PipeTogglePreview()
   endif
 endfun
+
+" @brief command alias for g:PipeToggleWindow()
+command! -nargs=0 PipeToggleWindow :call g:PipeToggleWindow()
 " }}}
 
+
 " Toggle Preview Window: {{{
+" @see TODO: Give credit to this solution on Stackoverflow
 fun! g:PipeTogglePreview()
   if s:PreviewWindowOpened()
     :pclose
@@ -200,7 +213,6 @@ fun! g:PipeTogglePreview()
     silent! exec "botright pedit ¦"
   endif
 endfun
-command! -nargs=0 PipeToggleWindow :call g:PipeToggleWindow()
 
 fun! s:PreviewWindowOpened()
     for nr in range(1, winnr('$'))
@@ -213,9 +225,12 @@ fun! s:PreviewWindowOpened()
 endfun
 " }}}
 
+
 " Toggle Quickfix Window: {{{
 let s:quickfix_is_open = 0
 
+" @brief Toggle quickfix window
+" @see Steve Losh's tutorial - http://learnvimscriptthehardway.stevelosh.com/chapters/38.html
 fun! g:PipeToggleQuickfix()
     if s:quickfix_is_open
         cclose
