@@ -3,12 +3,17 @@
 " License: MIT
 " Origin: http://github.com/NLKNguyen/pipe.vim
 
+if exists("g:loaded_pipedotvim") || &cp
+  finish
+endif
+let g:loaded_pipedotvim = 1
+
 " Main: {{{
 
 " @brief Method name that decides Pipe behavior
 let s:method = 'Default'
 
-" @brief Specify what method to be used for running commands
+" @brief Specify what method to be used for running the shell command
 " @param string - predefined method name
 fun! g:PipeUse(method)
   if a:method ==? 'Default' || a:method ==? 'Dispatch'
@@ -23,6 +28,7 @@ endfun
 
 " @brief command alias for g:PipeUse(method)
 command! -nargs=1  PipeUse :call g:PipeUse("<args>")
+
 
 " @brief The plugin's main function that calls the appropriate function
 "        depending on s:method
