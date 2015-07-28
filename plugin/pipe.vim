@@ -3,10 +3,11 @@
 " License: MIT
 " Origin: http://github.com/NLKNguyen/pipe.vim
 
-if exists("g:loaded_pipedotvim") || &cp
-  finish
-endif
-let g:loaded_pipedotvim = 1
+" Disable for easy development
+" if exists("g:loaded_pipedotvim") || &cp
+"   finish
+" endif
+" let g:loaded_pipedotvim = 1
 
 " Main: {{{
 
@@ -40,6 +41,7 @@ fun! g:Pipe(cmd)
   else
     call s:PipeDefault(l:shell_command)
   endif
+  let s:last_command = a:cmd
 endfun
 
 " @brief command alias for g:Pipe(cmd)
@@ -63,6 +65,7 @@ fun! s:PipeDefault(shell_command)
   normal G
   setlocal nomodifiable
   noautocmd wincmd p
+  redraw!
   echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
 endfun
 
@@ -71,12 +74,23 @@ endfun
 " @see vim-dispatch - https://github.com/tpope/vim-dispatch
 fun! s:PipeDispatch(shell_command)
   au BufWinEnter quickfix setlocal statusline=
-  exec ":Dispatch " . a:shell_command
 
-  " For function g:PipeToggleQuickfix
-  let s:quickfix_is_open = 1
-  let g:quickfix_return_to_window = winnr()
+  "@brief a simple trick to force quickfix window always open
+  let l:force_open_qf = " printf ''  && "
+
+  exec ":Dispatch " . l:force_open_qf . a:shell_command
 endfun
+
+
+" @brief Rerun the last Pipe command
+fun! g:PipeLast()
+  if exists("s:last_command")
+    call g:Pipe(s:last_command)
+  endif
+endfun
+
+" @brief command alias for g:PipeLast()
+command! -nargs=0 PipeLast :call g:PipeLast()
 
 " }}}
 
@@ -85,22 +99,26 @@ endfun
 
 " @brief Load default or user settings
 fun! s:Load_Pipe_Preview_Settings()
-  let l:custom = {'linenumber' : 0, 'wordwrap' : 0}
+  if !exists("s:loaded_pipe_preview_settings")
+    let l:custom = {'linenumber' : 0, 'wordwrap' : 0}
 
-  if exists("g:pipe_preview_override")
-    let l:custom = g:pipe_preview_override
-  endif
+    if exists("g:pipe_preview_override")
+      let l:custom = g:pipe_preview_override
+    endif
 
-  if l:custom['linenumber']
-    setlocal number
-  else
-    setlocal nonumber
-  endif
+    if l:custom['linenumber']
+      setlocal number
+    else
+      setlocal nonumber
+    endif
 
-  if l:custom['wordwrap']
-    setlocal wrap
-  else
-    setlocal nowrap
+    if l:custom['wordwrap']
+      setlocal wrap
+    else
+      setlocal nowrap
+    endif
+
+    let s:loaded_pipe_preview_settings = 1
   endif
 
 endfun
@@ -122,11 +140,17 @@ fun! g:PipeGetVar(variable, prompt, ...)
     let l:visibility = a:1
   endif
 
-  if !exists(a:variable)
-    call g:PipeSetVar(a:variable, a:prompt, l:visibility)
+  if exists(a:variable)
+    if l:visibility == 2 "always prompt
+      let l:value = g:PipeSetVar(a:variable, a:prompt, l:visibility)
+    elseif l:visibility == -2 "always prompt with hidden input
+      let l:value = g:PipeSetVar(a:variable, a:prompt, 0)
+    else
+      let l:value = {a:variable}
+    endif
+  else
+    let l:value = g:PipeSetVar(a:variable, a:prompt, l:visibility)
   endif
-
-  let l:value = {a:variable}
 
   return l:value
 endfun
@@ -158,6 +182,7 @@ fun! g:PipeSetVar(variable, prompt, ...)
   call inputrestore()
 
   let {a:variable} = l:value
+  return l:value
 endfun
 " }}}
 
@@ -169,16 +194,21 @@ endfun
 " @return string - visually selected text (including newlines)
 " @see original solution - http://stackoverflow.com/a/6271254/794380
 fun! g:PipeGetSelectedText()
+  return join(g:PipeGetSelectedTextAsList(), "\n")
+endfun
+
+fun! g:PipeGetSelectedTextAsList()
   " Why is this not a built-in Vim script function?!
   let [lnum1, col1] = getpos("'<")[1:2]
   let [lnum2, col2] = getpos("'>")[1:2]
   let lines = getline(lnum1, lnum2)
+  if len(lines) == 0
+    return []
+  endif
   let lines[-1] = lines[-1][: col2 - (&selection == 'inclusive' ? 1 : 2)]
   let lines[0] = lines[0][col1 - 1:]
-  " echo join(lines, "\n")
-  return join(lines, "\n")
+  return lines
 endfun
-
 " @brief Get a line of text
 " @return string - a whole line where the cursor is currently at
 fun! g:PipeGetCurrentLine()
@@ -233,12 +263,12 @@ endfun
 
 
 " Toggle Quickfix Window: {{{
-let s:quickfix_is_open = 0
+" let s:quickfix_is_open = 0
 
 " @brief Toggle quickfix window
 " @see Steve Losh's tutorial - http://learnvimscriptthehardway.stevelosh.com/chapters/38.html
 fun! g:PipeToggleQuickfix()
-    if s:quickfix_is_open
+    if exists("s:quickfix_is_open") && s:quickfix_is_open
         cclose
         let s:quickfix_is_open = 0
         execute g:quickfix_return_to_window . "wincmd w"
@@ -253,11 +283,13 @@ endfun
 " =============================================================================
 " Mapping: {{{
 noremap <Plug>PipePrompt :Pipe 
+noremap <silent> <Plug>PipeLast :PipeLast<CR>
 noremap <silent> <Plug>PipeToggle :PipeToggleWindow<CR>
 
 if !exists("g:pipe_no_mappings") || ! g:pipe_no_mappings
-  nmap _<bar> <Plug>PipePrompt
-  nmap __ <Plug>PipeToggle
+  nmap _<bar>     <Plug>PipePrompt
+  nmap <bar><bar> <Plug>PipeLast
+  nmap __         <Plug>PipeToggle
 endif
 " }}}
 
