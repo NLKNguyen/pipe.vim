@@ -1,7 +1,7 @@
 # pipe.vim
-Plugin to simply pipe command line output into Vim for previewing
+Simply pipe command line output into Vim for previewing
 
-Included helper functions for easily obtaining user input when needed, getting text from the buffer, and so on to compose sophisticated autocommands.
+Included helper functions to easily obtain user input when needed, get text from the buffer, and so on
 
 # Install
 
@@ -10,52 +10,69 @@ Using [Vundle](https://github.com/VundleVim/Vundle.vim) plugin manager:
 Plugin 'NLKNguyen/pipe.vim'
 ```
 
-# 1 Minute Tutorial (Basic)
+# Sample Usage
 ### :Pipe echo 'any shell command output'
-It will return the string `any shell command output` in a Preview or Quickfix window. 
+It will return the string `any shell command output` in a Preview window.
 
 Characters like % or # are escaped (i.e. % will not result in the filename. It's just plain % symbol)
 
-| Behavior     | Using                                                 | Display window  |
-| ---          | ---                                                   | ---             |
-| Synchronous  | built-in                                              | Preview window  |
-| Asynchronous | [vim-dispatch](https://github.com/tpope/vim-dispatch) | Quickfix window |
-
-To toggle display window `:PipeToggleWindow`
-
-**Default key mapping in Normal mode**
+**Default key mappings in Normal mode**
 
 `_|` (underscore then pipe character): prompt the prefix `:Pipe ` into Vim command line
 
+`||` (double pipe): rerun the last Pipe command
+
 `__` (double underscore): toggle display window
 
-See FAQ section for how to turn off default mappings and use your own
 
-
-#### :PipeUse Dispatch
-Then run the previous :Pipe command again, it will use :Dispatch command from vim-dispatch to run instead. It requires vim-dispatch to be installed prior and having an adapter like Tmux ready in order to run asynchronously. This is suitable for long-running shell command.
-
-#### :PipeUse Default
-Use the default synchronous behavior
-
-
-# Advance
-// TODO: add info
-
-# Help
-// TODO: add info
-
-# FAQ
-
-1. Turn off default key mappings and use your own
+To turn off default key mappings and use your own:
 ```VimL
   let g:pipe_no_mappings = 1
 
   " Use your key
-  nmap _<bar> <Plug>PipePrompt
-  nmap __ <Plug>PipeToggle
-
+  nmap _<bar>     <Plug>PipePrompt
+  nmap <bar><bar> <Plug>PipeLast
+  nmap __         <Plug>PipeToggle
 ```
+
+# Helper Functions
+These are simple and convenient functions that can be used to build sophisticated Pipe command. The MySQL client plugin [pipe-mysql.vim](https://github.com/NLKNguyen/pipe-mysql.vim) is an example that takes advantage of these.
+
+### g:PipeGetVar(variable, prompt, ...)
+    @brief Get variable value or Ask for input if variable doesn't exist
+    @param variable - quoted string of the variable name
+    @param prompt - prompt message for input (in case an input is needed)
+    @param visibility [optional] - 0: hidden input;
+                                   1: visible input;
+                                  10: always prompt with hidden input;
+                                  11: always prompt with visible input;
+    @return value of the variable
+
+### g:PipeSetVar(variable, prompt, ...)
+    @brief Set variable value by asking for user input
+    @param variable - quoted string of the variable name
+    @param prompt - prompt message for input
+    @return value of the input
+
+### g:PipeGetCurrentWord()
+    @brief Get a word
+    @return string - a whole word where the cursor is currently at
+
+### g:PipeGetCurrentLine()
+    @brief Get a line of text
+    @return string - a whole line where the cursor is currently at
+
+### g:PipeGetSelectedText()
+    @brief  Get the selected text in visual mode
+    @return string - visually selected text (including newlines)
+
+### g:PipeGetSelectedTextAsList()
+    @brief  Get the selected text in visual mode
+    @return list - visually selected text as list;
+                   useful for writing to file
+
+-------
+Suggestions/Wishes/Questions/Comments are welcome via [Github issues](https://github.com/NLKNguyen/pipe-mysql/issues)
 
 # License MIT
 Copyright (c) Nguyen Nguyen

@@ -3,11 +3,10 @@
 " License: MIT
 " Origin: http://github.com/NLKNguyen/pipe.vim
 
-" Disable for easy development
-" if exists("g:loaded_pipedotvim") || &cp
-"   finish
-" endif
-" let g:loaded_pipedotvim = 1
+if exists("g:loaded_pipedotvim") || &cp
+  finish
+endif
+let g:loaded_pipedotvim = 1
 
 " Main: {{{
 
@@ -51,7 +50,7 @@ command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 " @brief Default Pipe behavior: blocking & using Preview window
 " @param string - escaped shell commands
 fun! s:PipeDefault(shell_command)
-  echohl String | echon 'Pipe running... (press ctrl-c to abort)' | echohl None
+  echohl String | echon ' ¦ Pipe running... (press ctrl-c to abort)' | echohl None
 
   silent! exe "noautocmd botright pedit ¦"
   noautocmd wincmd P
@@ -100,7 +99,7 @@ command! -nargs=0 PipeLast :call g:PipeLast()
 " @brief Load default or user settings
 fun! s:Load_Pipe_Preview_Settings()
   if !exists("s:loaded_pipe_preview_settings")
-    let l:custom = {'linenumber' : 0, 'wordwrap' : 0}
+    let l:custom = {'linenumber' : 0, 'wordwrap' : 0, 'whitespace' : 0, 'colorcolumn' : 0}
 
     if exists("g:pipe_preview_override")
       let l:custom = g:pipe_preview_override
@@ -118,19 +117,32 @@ fun! s:Load_Pipe_Preview_Settings()
       setlocal nowrap
     endif
 
+    if l:custom['whitespace']
+      setlocal list
+    else
+      setlocal nolist
+    endif
+
+    if !l:custom['colorcolumn']
+      setlocal colorcolumn=
+    endif
+
     let s:loaded_pipe_preview_settings = 1
   endif
 
 endfun
 "}}}
 
-" =============================================================================
 
 " Get Or Set Variables: {{{
 
 " @brief Get variable value or Ask for input if variable doesn't exist
 " @param variable - quoted string of the variable name
 " @param prompt - prompt message for input (in case an input is needed)
+" @param visibility [optional] - 0: hidden input;
+"                                1: visible input;
+"                               10: always prompt with hidden input;
+"                               11: always prompt with visible input;
 " @return value of the variable
 fun! g:PipeGetVar(variable, prompt, ...)
   let l:value = ""
@@ -141,9 +153,9 @@ fun! g:PipeGetVar(variable, prompt, ...)
   endif
 
   if exists(a:variable)
-    if l:visibility == 2 "always prompt
+    if l:visibility == 11 "always prompt
       let l:value = g:PipeSetVar(a:variable, a:prompt, l:visibility)
-    elseif l:visibility == -2 "always prompt with hidden input
+    elseif l:visibility == 10 "always prompt with hidden input
       let l:value = g:PipeSetVar(a:variable, a:prompt, 0)
     else
       let l:value = {a:variable}
@@ -159,6 +171,7 @@ endfun
 " @brief Set variable value by asking for user input
 " @param variable - quoted string of the variable name
 " @param prompt - prompt message for input
+" @return value of the input
 fun! g:PipeSetVar(variable, prompt, ...)
   let l:value = ""
 
@@ -186,7 +199,6 @@ fun! g:PipeSetVar(variable, prompt, ...)
 endfun
 " }}}
 
-" =============================================================================
 
 " Get Text For Composing Autocommands: {{{
 
@@ -197,6 +209,9 @@ fun! g:PipeGetSelectedText()
   return join(g:PipeGetSelectedTextAsList(), "\n")
 endfun
 
+" @brief  Get the selected text in visual mode as List
+" @return list - visually selected text as list
+" @see original solution - http://stackoverflow.com/a/6271254/794380
 fun! g:PipeGetSelectedTextAsList()
   " Why is this not a built-in Vim script function?!
   let [lnum1, col1] = getpos("'<")[1:2]
@@ -209,6 +224,7 @@ fun! g:PipeGetSelectedTextAsList()
   let lines[0] = lines[0][col1 - 1:]
   return lines
 endfun
+
 " @brief Get a line of text
 " @return string - a whole line where the cursor is currently at
 fun! g:PipeGetCurrentLine()
@@ -224,7 +240,6 @@ endfun
 
 " }}}
 
-" =============================================================================
 
 " Toggle Quickfix Or Preview Window: {{{
 fun! g:PipeToggleWindow()
@@ -263,7 +278,6 @@ endfun
 
 
 " Toggle Quickfix Window: {{{
-" let s:quickfix_is_open = 0
 
 " @brief Toggle quickfix window
 " @see Steve Losh's tutorial - http://learnvimscriptthehardway.stevelosh.com/chapters/38.html
