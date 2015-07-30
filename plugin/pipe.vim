@@ -13,6 +13,7 @@ let g:loaded_pipedotvim = 1
 " @brief Method name that decides Pipe behavior
 let s:method = 'Default'
 
+" @warning Experimental feature
 " @brief Specify what method to be used for running the shell command
 " @param string - predefined method name
 fun! g:PipeUse(method)
@@ -68,6 +69,7 @@ fun! s:PipeDefault(shell_command)
   echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
 endfun
 
+" @warning Experimental feature
 " @brief Alternative Pipe behavior: non-blocking & using Quickfix window
 " @param string - escaped shell commands
 " @see vim-dispatch - https://github.com/tpope/vim-dispatch
@@ -140,7 +142,7 @@ endfun
 " @param variable - quoted string of the variable name
 " @param prompt - prompt message for input (in case an input is needed)
 " @param visibility [optional] - 0: hidden input;
-"                                1: visible input;
+"                                1: visible input (default);
 "                               10: always prompt with hidden input;
 "                               11: always prompt with visible input;
 " @return value of the variable

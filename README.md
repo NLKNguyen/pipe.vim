@@ -43,7 +43,7 @@ These are simple and convenient functions that can be used to build sophisticate
     @param variable - quoted string of the variable name
     @param prompt - prompt message for input (in case an input is needed)
     @param visibility [optional] - 0: hidden input;
-                                   1: visible input;
+                                   1: visible input (default);
                                   10: always prompt with hidden input;
                                   11: always prompt with visible input;
     @return value of the variable
@@ -72,7 +72,7 @@ These are simple and convenient functions that can be used to build sophisticate
                    useful for writing to file
 
 -------
-Suggestions/Wishes/Questions/Comments are welcome via [Github issues](https://github.com/NLKNguyen/pipe-mysql/issues)
+Suggestions/Wishes/Questions/Comments are welcome via [Github issues](https://github.com/NLKNguyen/pipe.vim/issues)
 
 # License MIT
 Copyright (c) Nguyen Nguyen
