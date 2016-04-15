@@ -12,6 +12,7 @@ let g:loaded_pipedotvim = 1
 
 " @brief Method name that decides Pipe behavior
 let s:method = 'Default'
+let s:top_or_bottom = 'bottom'
 
 " @warning Experimental feature
 " @brief Specify what method to be used for running the shell command
@@ -34,12 +35,14 @@ command! -nargs=1  PipeUse :call g:PipeUse("<args>")
 " @brief The plugin's main function that calls the appropriate function
 "        depending on s:method
 " @param string - shell command
-fun! g:Pipe(cmd)
+fun! g:Pipe(cmd, ...)
+  let top_or_bottom = a:0 >= 1 ? a:1 : ''
+
   let l:shell_command = escape(a:cmd, '%#\')
   if s:method ==? 'Dispatch'
     call s:PipeDispatch(l:shell_command)
   else
-    call s:PipeDefault(l:shell_command)
+    call s:PipeDefault(l:shell_command, top_or_bottom)
   endif
   let s:last_command = a:cmd
 endfun
@@ -47,10 +50,11 @@ endfun
 " @brief command alias for g:Pipe(cmd)
 command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 
-
 " @brief Default Pipe behavior: blocking & using Preview window
 " @param string - escaped shell commands
-fun! s:PipeDefault(shell_command)
+fun! s:PipeDefault(shell_command, ...)
+  let top_or_bottom = a:0 >= 1 ? a:1 : ''
+
   echohl String | echon ' ¦ Pipe running... (press ctrl-c to abort)' | echohl None
 
   silent! exe "noautocmd botright pedit ¦"
@@ -62,7 +66,21 @@ fun! s:PipeDefault(shell_command)
 
   set buftype=nofile
   silent! exe "noautocmd .! " . a:shell_command
-  normal G
+
+  if top_or_bottom != ''
+    let go_to = top_or_bottom
+  elseif exists('g:top_or_bottom')
+    let go_to = g:top_or_bottom
+  else
+    let go_to = s:top_or_bottom
+  endif
+
+  if go_to == 'top'
+    normal gg
+  else
+    normal G
+  endif
+
   setlocal nomodifiable
   noautocmd wincmd p
   redraw!
