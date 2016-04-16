@@ -12,7 +12,7 @@ let g:loaded_pipedotvim = 1
 
 " @brief Method name that decides Pipe behavior
 let s:method = 'Default'
-let s:top_or_bottom = 'bottom'
+let s:pipe_default_cursor_position = 'bottom'
 
 " @warning Experimental feature
 " @brief Specify what method to be used for running the shell command
@@ -36,13 +36,13 @@ command! -nargs=1  PipeUse :call g:PipeUse("<args>")
 "        depending on s:method
 " @param string - shell command
 fun! g:Pipe(cmd, ...)
-  let top_or_bottom = a:0 >= 1 ? a:1 : ''
+  let pipe_default_cursor_position = a:0 >= 1 ? a:1 : ''
 
   let l:shell_command = escape(a:cmd, '%#\')
   if s:method ==? 'Dispatch'
     call s:PipeDispatch(l:shell_command)
   else
-    call s:PipeDefault(l:shell_command, top_or_bottom)
+    call s:PipeDefault(l:shell_command, pipe_default_cursor_position)
   endif
   let s:last_command = a:cmd
 endfun
@@ -52,8 +52,9 @@ command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 
 " @brief Default Pipe behavior: blocking & using Preview window
 " @param string - escaped shell commands
+" @param string - optional second parameter for cursor position after render
 fun! s:PipeDefault(shell_command, ...)
-  let top_or_bottom = a:0 >= 1 ? a:1 : ''
+  let pipe_default_cursor_position = a:0 >= 1 ? a:1 : ''
 
   echohl String | echon ' ¦ Pipe running... (press ctrl-c to abort)' | echohl None
 
@@ -67,12 +68,14 @@ fun! s:PipeDefault(shell_command, ...)
   set buftype=nofile
   silent! exe "noautocmd .! " . a:shell_command
 
-  if top_or_bottom != ''
-    let go_to = top_or_bottom
-  elseif exists('g:top_or_bottom')
-    let go_to = g:top_or_bottom
+  " @brief Set the default position of the cursor after the preview window
+  " finishes rendering. This can be overridden globally and again at method call
+  if pipe_default_cursor_position != ''
+    let go_to = pipe_default_cursor_position
+  elseif exists('g:pipe_default_cursor_position')
+    let go_to = g:pipe_default_cursor_position
   else
-    let go_to = s:top_or_bottom
+    let go_to = s:pipe_default_cursor_position
   endif
 
   if go_to == 'top'
@@ -94,7 +97,7 @@ endfun
 fun! s:PipeDispatch(shell_command)
   au BufWinEnter quickfix setlocal statusline=
 
-  "@brief a simple trick to force quickfix window always open
+  " @brief a simple trick to force quickfix window always open
   let l:force_open_qf = " printf ''  && "
 
   exec ":Dispatch " . l:force_open_qf . a:shell_command
