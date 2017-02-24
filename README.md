@@ -1,9 +1,9 @@
 # pipe.vim
 Simply pipe command line output into Vim for previewing
 
-Included helper functions to easily obtain user input when needed, get text from the buffer, and so on
+Can work alone or intergrate with other running interface such as [vim-dispatch](https://github.com/tpope/vim-dispatch), [asyncrun.vim](https://github.com/skywind3000/asyncrun.vim) 
 
-Also can switch to other running interface such as [vim-dispatch](https://github.com/tpope/vim-dispatch)
+Include helper functions to easily obtain user input when needed, get text from the buffer, and so on. Suitable for basing on in order to write other custom plugins such as [pipe-mysql](https://github.com/NLKNguyen/pipe-mysql.vim)
 
 # Install
 
@@ -42,9 +42,11 @@ To turn off default key mappings and use your own:
 Where `[interface]` is the target running interface.
 
 
-`:PipeUse Default` will set the running interface to be default / **synchronously**. Output will be piped into Preview window within Vim
+`:PipeUse Default` will set the running interface to be default / **synchronously** (no dependencies, just Vim). Output will be piped into Preview window within Vim
 
-`:PipeUse Dispatch` will use Dispatch plugin, and your command can run **asynchronously**. Output will be piped into QuickFix window within Vim. See [vim-dispatch](https://github.com/tpope/vim-dispatch) documentation for more information.
+`:PipeUse Dispatch` will use Dispatch plugin, and your command can run **asynchronously** (using an adapter such as tmux or screen). Output will be piped into QuickFix window within Vim. See [vim-dispatch](https://github.com/tpope/vim-dispatch) documentation for more information.
+
+`:PipeUse AsyncRun` will use AsyncRun plugin, and your command can run **asynchronously** (Vim 7.4.1829 or later / NeoVim 0.1.4 or later). Output will be piped into QuickFix window within Vim. See [asyncrun.vim](https://github.com/skywind3000/asyncrun.vim) documentation for more information.
 
 ## :PipeToFile [file name]  
 

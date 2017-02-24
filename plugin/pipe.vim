@@ -18,13 +18,13 @@ let s:pipe_default_cursor_position = 'bottom'
 " @brief Specify what method to be used for running the shell command
 " @param string - predefined method name
 fun! g:PipeUse(method)
-  if a:method ==? 'Default' || a:method ==? 'Dispatch'
+  if a:method ==? 'Default' || a:method ==? 'Dispatch' || a:method ==? 'AsyncRun'
     let s:method = a:method
     cclose "close quickfix window
     pclose "close preview window
   else
     echo 'Unrecognized method `'. a:method .'`. ' .
-          \ 'Try :PipeUse with method `Default` or `Dispatch'
+          \ 'Try :PipeUse with method `Default`, `Dispatch`, or `AsyncRun`'
   endif
 endfun
 
@@ -61,6 +61,8 @@ fun! g:Pipe(cmd, ...)
   let l:shell_command = escape(a:cmd, '%#\')
   if s:method ==? 'Dispatch'
     call s:PipeDispatch(l:shell_command)
+  elseif s:method ==? 'AsyncRun'
+    call s:PipeAsyncRun(l:shell_command)
   else
     call s:PipeDefault(l:shell_command, pipe_default_cursor_position)
   endif
@@ -91,6 +93,7 @@ fun! s:PipeDefault(shell_command, ...)
 
   " @brief if there is output file target, then redirect command output to
   " that file instead of loading into Preview window
+  " TODO: support Windows & refactor these duplicated code to function
   if s:output_file != ''
     " redirect command output to file
     let l:shell_command .= ' &> ' . s:output_file 
@@ -123,16 +126,17 @@ fun! s:PipeDefault(shell_command, ...)
   echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
 endfun
 
-" @warning Experimental feature
 " @brief Alternative Pipe behavior: non-blocking & using Quickfix window
+"        via external running interface plugin: Vim-Dispatch
+" @see https://github.com/tpope/vim-dispatch
 " @param string - escaped shell commands
-" @see vim-dispatch - https://github.com/tpope/vim-dispatch
 fun! s:PipeDispatch(shell_command)
   au BufWinEnter quickfix setlocal statusline=
 
   let l:shell_command = a:shell_command
   " @brief if there is output file target, then redirect command output to
   " that file instead of loading into Preview window
+  " TODO: support Windows & refactor these duplicated code to function
   if s:output_file != ''
     " redirect command output to file
     let l:shell_command .= ' &> ' . s:output_file 
@@ -144,6 +148,28 @@ fun! s:PipeDispatch(shell_command)
   let l:force_open_qf = " printf ''  && "
 
   exec ":Dispatch " . l:force_open_qf . l:shell_command
+endfun
+
+" @brief Alternative Pipe behavior: non-blocking & using Quickfix window
+"        via external running interface plugin AsyncRun.vim
+" @see https://github.com/skywind3000/asyncrun.vim 
+" @param string - escaped shell commands
+fun! s:PipeAsyncRun(shell_command)
+  au BufWinEnter quickfix setlocal statusline=
+
+  let l:shell_command = a:shell_command
+  " @brief if there is output file target, then redirect command output to
+  " that file instead of loading into Preview window
+  " TODO: support Windows & refactor these duplicated code to function
+  if s:output_file != ''
+    " redirect command output to file
+    let l:shell_command .= ' &> ' . s:output_file 
+    " also print out the name of the file being written
+    let l:shell_command .= '; echo "\"' . s:output_file . '\" "'
+  endif
+
+  autocmd QuickFixCmdPost [^l]* nested botright copen
+  exec ":AsyncRun " . l:shell_command
 endfun
 
 
@@ -309,7 +335,7 @@ endfun
 
 " Toggle Quickfix Or Preview Window: {{{
 fun! g:PipeToggleWindow()
-  if s:method ==? 'Dispatch'
+  if s:method ==? 'Dispatch' || s:method ==? 'AsyncRun'
     call g:PipeToggleQuickfix()
   else
     call g:PipeTogglePreview()
@@ -332,31 +358,28 @@ fun! g:PipeTogglePreview()
 endfun
 
 fun! s:PreviewWindowOpened()
-    for nr in range(1, winnr('$'))
-        if getwinvar(nr, "&pvw") == 1
-            " found a preview
-            return 1
-        endif
-    endfor
-    return 0
+  for nr in range(1, winnr('$'))
+    if getwinvar(nr, "&pvw") == 1
+      " found a preview
+      return 1
+    endif
+  endfor
+  return 0
 endfun
 " }}}
 
 
 " Toggle Quickfix Window: {{{
 
-" @brief Toggle quickfix window
-" @see Steve Losh's tutorial - http://learnvimscriptthehardway.stevelosh.com/chapters/38.html
+" @brief Toggle quickfix window 
+"        copy from https://github.com/drmingdrmer/vim-toggle-quickfix
 fun! g:PipeToggleQuickfix()
-    if exists("s:quickfix_is_open") && s:quickfix_is_open
-        cclose
-        let s:quickfix_is_open = 0
-        execute g:quickfix_return_to_window . "wincmd w"
-    else
-        let g:quickfix_return_to_window = winnr()
-        copen
-        let s:quickfix_is_open = 1
-    endif
+  let nr = winnr("$")
+  botright copen
+  let nr2 = winnr("$")
+  if nr == nr2
+    cclose
+  endif
 endfun
 " }}}
 
