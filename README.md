@@ -3,6 +3,8 @@ Simply pipe command line output into Vim for previewing
 
 Included helper functions to easily obtain user input when needed, get text from the buffer, and so on
 
+Also can switch to other running interface such as [vim-dispatch](https://github.com/tpope/vim-dispatch)
+
 # Install
 
 Using [Vundle](https://github.com/VundleVim/Vundle.vim) plugin manager:
@@ -11,7 +13,7 @@ Plugin 'NLKNguyen/pipe.vim'
 ```
 
 # Sample Usage
-### :Pipe echo 'any shell command output'
+## :Pipe echo 'any shell command output'
 It will return the string `any shell command output` in a Preview window.
 
 Characters like % or # are escaped (i.e. % will not result in the filename. It's just plain % symbol)
@@ -34,6 +36,21 @@ To turn off default key mappings and use your own:
   nmap <bar><bar> <Plug>PipeLast
   nmap __         <Plug>PipeToggle
 ```
+
+## :PipeUse [interface]
+
+Where `[interface]` is the target running interface.
+
+
+`:PipeUse Default` will set the running interface to be default / **synchronously**. Output will be piped into Preview window within Vim
+
+`:PipeUse Dispatch` will use Dispatch plugin, and your command can run **asynchronously**. Output will be piped into QuickFix window within Vim. See [vim-dispatch](https://github.com/tpope/vim-dispatch) documentation for more information.
+
+## :PipeToFile [file name]  
+
+`:PipeToFile output.txt` will make the command output be piped into the given file name instead of capturing inside Vim. A window will popup to notify when the file is written.
+
+`:PipeToFile` without providing a file name will turn off writing to file, and the ouput will be piped into Vim window normally.
 
 # Helper Functions
 These are simple and convenient functions that can be used to build sophisticated Pipe command. The MySQL client plugin [pipe-mysql.vim](https://github.com/NLKNguyen/pipe-mysql.vim) is an example that takes advantage of these.

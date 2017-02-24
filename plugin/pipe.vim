@@ -32,6 +32,26 @@ endfun
 command! -nargs=1  PipeUse :call g:PipeUse("<args>")
 
 
+" @brief Output file. If not empty, Pipe output will write to the file only
+" and won't display in Vim
+let s:output_file = ''
+
+" @brief Set Output File
+" @param string - optional file name. If empty, turn off writing to file
+fun! g:PipeToFile(...)
+  let l:file_name = a:0 >= 1 ? a:1 : ''
+  let l:file_name = substitute(l:file_name, '\n\+$', '', '') " trim white spaces
+  if l:file_name == ''
+    echo 'No output file detected'
+  else
+    echo 'Pipe ouput will be written to "' . l:file_name . '"'
+  endif
+  let s:output_file = l:file_name
+endfun
+
+" @brief command alias for g:PipeToFile(file_name)
+command! -nargs=? -complete=file  PipeToFile :call g:PipeToFile(<f-args>)
+
 " @brief The plugin's main function that calls the appropriate function
 "        depending on s:method
 " @param string - shell command
@@ -54,6 +74,8 @@ command! -nargs=1 -complete=shellcmd  Pipe :call g:Pipe(<f-args>)
 " @param string - escaped shell commands
 " @param string - optional second parameter for cursor position after render
 fun! s:PipeDefault(shell_command, ...)
+  let l:shell_command = a:shell_command
+
   let pipe_default_cursor_position = a:0 >= 1 ? a:1 : ''
 
   echohl String | echon ' ¦ Pipe running... (press ctrl-c to abort)' | echohl None
@@ -66,7 +88,18 @@ fun! s:PipeDefault(shell_command, ...)
   call s:Load_Pipe_Preview_Settings()
 
   set buftype=nofile
-  silent! exe "noautocmd .! " . a:shell_command
+
+  " @brief if there is output file target, then redirect command output to
+  " that file instead of loading into Preview window
+  if s:output_file != ''
+    " redirect command output to file
+    let l:shell_command .= ' &> ' . s:output_file 
+    " also print out the name of the file being written
+    let l:shell_command .= '; echo "\"' . s:output_file . '\" "'
+  endif
+
+  " @brief execute the shell command and write output into Preview window
+  silent! exe "noautocmd .! " . l:shell_command
 
   " @brief Set the default position of the cursor after the preview window
   " finishes rendering. This can be overridden globally and again at method call
@@ -97,10 +130,20 @@ endfun
 fun! s:PipeDispatch(shell_command)
   au BufWinEnter quickfix setlocal statusline=
 
+  let l:shell_command = a:shell_command
+  " @brief if there is output file target, then redirect command output to
+  " that file instead of loading into Preview window
+  if s:output_file != ''
+    " redirect command output to file
+    let l:shell_command .= ' &> ' . s:output_file 
+    " also print out the name of the file being written
+    let l:shell_command .= '; echo "\"' . s:output_file . '\" "'
+  endif
+
   " @brief a simple trick to force quickfix window always open
   let l:force_open_qf = " printf ''  && "
 
-  exec ":Dispatch " . l:force_open_qf . a:shell_command
+  exec ":Dispatch " . l:force_open_qf . l:shell_command
 endfun
 
 
