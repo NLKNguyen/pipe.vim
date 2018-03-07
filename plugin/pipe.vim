@@ -101,8 +101,10 @@ fun! s:PipeDefault(shell_command, ...)
     let l:shell_command .= '; echo "\"' . s:output_file . '\" "'
   endif
 
+  let start = reltime()
   " @brief execute the shell command and write output into Preview window
   silent! exe "noautocmd .! " . l:shell_command
+  let run_time = split(reltimestr(reltime(start)))[0]
 
   " @brief Set the default position of the cursor after the preview window
   " finishes rendering. This can be overridden globally and again at method call
@@ -123,7 +125,7 @@ fun! s:PipeDefault(shell_command, ...)
   setlocal nomodifiable
   noautocmd wincmd p
   redraw!
-  echohl Comment | echon 'Pipe finished at ' . strftime("%H:%M:%S ") | echohl None
+  echohl Comment | echon printf('Pipe finished at %s (%ss)', strftime("%H:%M:%S"), run_time) | echohl None
 endfun
 
 " @brief Alternative Pipe behavior: non-blocking & using Quickfix window
