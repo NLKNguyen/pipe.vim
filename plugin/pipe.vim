@@ -58,7 +58,7 @@ command! -nargs=? -complete=file  PipeToFile :call g:PipeToFile(<f-args>)
 fun! g:Pipe(cmd, ...)
   let pipe_default_cursor_position = a:0 >= 1 ? a:1 : ''
 
-  let l:shell_command = escape(a:cmd, '%#\')
+  let l:shell_command = escape(a:cmd, '%#!\')
   if s:method ==? 'Dispatch'
     call s:PipeDispatch(l:shell_command)
   elseif s:method ==? 'AsyncRun'
